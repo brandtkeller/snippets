@@ -1,0 +1,9 @@
+[Unit]
+Description=runscript python service for button detection
+
+[Service]
+Restart=always
+ExecStart=/home/pi/runscript.py /home/pi/restart.py
+
+[Install]
+WantedBy=multi-user.target
