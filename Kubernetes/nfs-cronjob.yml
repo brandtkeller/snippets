@@ -1,0 +1,33 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: nfs-cronjob
+spec:
+  schedule: "*/* 1 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: nfs-rsync
+            image: busybox
+            imagePullPolicy: IfNotPresent
+            args:
+            - /bin/sh
+            - -c
+            - rsync -avh /from/path /to/path
+            volumeMounts:
+            - name: main-nfs
+              mountPath: /from/path
+            - name: backup-nfs
+              mountPath: /to/path
+          restartPolicy: OnFailure
+          volumes:
+          - name: main-nfs
+            nfs: 
+              server: 192.168.0.120
+              path: /apps/code-server
+          - name: backup-nfs
+            nfs: 
+              server: 192.168.0.130
+              path: /apps/code-server

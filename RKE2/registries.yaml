@@ -1,0 +1,4 @@
+configs:
+  "registry.home.local:8443":
+    tls:
+      ca_file: /etc/rancher/rke2/ca.crt
