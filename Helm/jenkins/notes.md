@@ -6,9 +6,9 @@ These directions are modifications to the values.yaml file (see jenkins-values.y
 ## Helm chart
 This logic pertains to chart `version: 3.0.14`
 * Update image tag
-    * tag: "2.270"
+    * tag: "2.279"
 * Modify controller.javaOpts
-    * javaOpts: "-Djavax.net.ssl.trustStore=/var/jenkins_keystore/keystore.jks -Djavax.net.ssl.trustStorePassword=changeit"
+    * javaOpts: "-Djavax.net.ssl.trustStore=/var/jenkins_keystore/cacerts -Djavax.net.ssl.trustStorePassword=changeit"
 * Create a secret w/ certs to trust
     * kubectl create secret generic trusted-certificates --from-file=~/ca.crt -n <namespace>
 * Create a volume mount that mounts the secret to pod
@@ -60,3 +60,9 @@ This logic pertains to chart `version: 3.0.14`
 * Testing
 
 * Installation
+
+## Current WIP
+Configure JCASC section for base implementation
+Break down JCASC into only necessary blocks
+
+helm upgrade --install jenkins --values jenkins-values.yaml jenkins/jenkins -n cicd

@@ -19,7 +19,7 @@ controller:
   # Used for label app.kubernetes.io/component
   componentName: "jenkins-controller"
   image: "jenkins/jenkins"
-  tag: "2.270"
+  tag: "2.279"
   imagePullPolicy: "Always"
   imagePullSecretName:
   # Optionally configure lifetime for controller-container
@@ -73,7 +73,7 @@ controller:
   #   - name: http_proxy
   #     value: "http://192.168.64.1:3128"
   # Set min/max heap here if needed with:
-  javaOpts: "-Djavax.net.ssl.trustStore=/var/jenkins_home/keystore.jks -Djavax.net.ssl.trustStorePassword=changeit"
+  javaOpts: "-Djavax.net.ssl.trustStore=/var/jenkins_home/cacerts -Djavax.net.ssl.trustStorePassword=changeit"
   # jenkinsOpts: ""
   jenkinsUrl: "jenkins.rke2.home.local"
   # If you set this prefix and use ingress controller then you might want to set the ingress path below
@@ -179,11 +179,12 @@ controller:
 
   # List of plugins to be install during Jenkins controller start
   installPlugins:
-    - kubernetes:1.27.6
+    - kubernetes:1.29.0
     - workflow-aggregator:2.6
-    - git:4.4.5
-    - configuration-as-code:1.46
-    - ldap:2.2
+    - git:4.5.2
+    - configuration-as-code:1.47
+    - ldap:2.3
+    - gitea:1.2.1
 
   # List of plugins to install in addition to those listed in controller.installPlugins
   additionalPlugins: []
@@ -232,7 +233,7 @@ controller:
                 groupSearchBase: "cn=groups,cn=accounts"
                 inhibitInferRootDN: false
                 managerDN: "uid=home_svc,cn=users,cn=accounts,dc=home,dc=local"
-                managerPasswordSecret: "skynet"
+                managerPasswordSecret: "notmyrealpassword"
                 rootDN: "dc=home,dc=local"
                 server: "ldaps://freeipa.home.local:636"
                 userSearchBase: "cn=users,cn=accounts"
@@ -255,10 +256,19 @@ controller:
         allowAnonymousRead: false
   # Optionally specify additional init-containers
   customInitContainers:
-  - name: keytool-container
+  - name: jenkins-cacerts
+    image: jenkins/jenkins:2.279
+    imagePullPolicy: IfNotPresent
+    command: ["/bin/sh", "-c", "cp $JAVA_HOME/jre/lib/security/cacerts /var/jenkins_home && chmod 700 /var/jenkins_home/cacerts"]
+    volumeMounts:
+    - name: jenkins-home
+      mountPath: "/var/jenkins_home"
+  - name: keytool
     image: adoptopenjdk/openjdk8:alpine
     imagePullPolicy: IfNotPresent
-    command: ["/bin/sh", "-c", "keytool -import -trustcacerts -alias home.local -file /var/jenkins_keystore/ca.crt -keystore /var/jenkins_home/keystore.jks -storepass changeit -noprompt"]
+    command: ["/bin/sh", "-c", "for i in $(find /var/jenkins_keystore/ -name *.crt); do 
+              (keytool -delete -alias $(basename $i) -keystore /var/jenkins_home/cacerts -storepass changeit -noprompt || echo 'Cert not in keystore') && 
+              (keytool -import -trustcacerts -alias $(basename $i) -file $i -keystore /var/jenkins_home/cacerts -storepass changeit -noprompt); done"]
     volumeMounts:
     - name: jenkins-home
       mountPath: "/var/jenkins_home"
@@ -473,13 +483,13 @@ agent:
   enabled: true
   defaultsProviderTemplate: ""
   # URL for connecting to the Jenkins contoller
-  jenkinsUrl:
+  jenkinsUrl: 
   # connect to the specified host and port, instead of connecting directly to the Jenkins controller
   jenkinsTunnel:
   kubernetesConnectTimeout: 5
   kubernetesReadTimeout: 15
   namespace:
-  image: "jenkins/inbound-agent"
+  image: "registry.home.local:8443/jenkins/base-agent"
   tag: "4.6-1"
   workingDir: "/home/jenkins"
   customJenkinsLabels: []
@@ -506,7 +516,10 @@ agent:
   # Allowed types are: ConfigMap, EmptyDir, HostPath, Nfs, PVC, Secret
   # Configure the attributes as they appear in the corresponding Java class for that type
   # https://github.com/jenkinsci/kubernetes-plugin/tree/master/src/main/java/org/csanchez/jenkins/plugins/kubernetes/volumes
-  volumes: []
+  volumes:
+  - type: Secret
+    mountPath: /usr/share/ca-certificates
+    secretName: root-ca-cert
   # - type: ConfigMap
   #   configMapName: myconfigmap
   #   mountPath: /var/myapp/myconfigmap
@@ -525,10 +538,7 @@ agent:
   #   claimName: mypvc
   #   mountPath: /var/myapp/mypvc
   #   readOnly: false
-  # - type: Secret
-  #   defaultMode: "600"
-  #   mountPath: /var/myapp/mysecret
-  #   secretName: mysecret
+
   # Pod-wide ennvironment, these vars are visible to any container in the agent pod
   envVars: []
   # - name: PATH
@@ -538,8 +548,8 @@ agent:
   # jenkins-agent: v1
 
   # Executed command when side container gets started
-  command:
-  args: "${computer.jnlpmac} ${computer.name}"
+  command: ""
+  args: ""
   # Side container name
   sideContainerName: "jnlp"
   # Doesn't allocate pseudo TTY by default
@@ -547,7 +557,7 @@ agent:
   # Max number of spawned agent
   containerCap: 10
   # Pod name
-  podName: "default"
+  podName: "jenkins-base-agent"
   # Allows the Pod to remain active for reuse until the configured number of
   # minutes has passed since the last step was executed on it.
   idleMinutes: 0
@@ -628,7 +638,8 @@ persistence:
   ##   GKE, AWS & OpenStack)
   ##
   storageClass:
-  annotations: {}
+  annotations:
+    helm.sh/resource-policy: "keep"
   accessMode: "ReadWriteOnce"
   size: "30Gi"
   volumes:
