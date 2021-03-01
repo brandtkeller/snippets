@@ -233,7 +233,7 @@ controller:
                 groupSearchBase: "cn=groups,cn=accounts"
                 inhibitInferRootDN: false
                 managerDN: "uid=home_svc,cn=users,cn=accounts,dc=home,dc=local"
-                managerPasswordSecret: "notmyrealpassword"
+                managerPasswordSecret: "REDACTED"
                 rootDN: "dc=home,dc=local"
                 server: "ldaps://freeipa.home.local:636"
                 userSearchBase: "cn=users,cn=accounts"

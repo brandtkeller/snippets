@@ -4,7 +4,7 @@ The httpskeystore logic is more tailored to setting up https for the application
 These directions are modifications to the values.yaml file (see jenkins-values.yaml in this directory) for trusting root CA certificates.
 
 ## Helm chart
-This logic pertains to chart `version: 3.0.14`
+This logic pertains to chart `version: 3.1.8`
 * Update image tag
     * tag: "2.279"
 * Modify controller.javaOpts
