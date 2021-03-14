@@ -201,13 +201,13 @@ plugins:
 ## Values to add to SONARQUBE_WEB_JVM_OPTS
 ##
 # jvmOpts: "-Djava.net.preferIPv4Stack=true"
-jvmOpts: ""
+jvmOpts: "-Djavax.net.ssl.trustStore=/opt/sonarqube/certs/cacerts"
 
 ## Environment variables to attach to the pods
 ##
-# env:
-#   - name: VARIABLE
-#     value: my-value
+env:
+  - name: SONAR_CE_JAVAOPTS
+    value: "-Djavax.net.ssl.trustStore=/opt/sonarqube/certs/cacerts"
 
 # Set annotations for pods
 annotations: {}
